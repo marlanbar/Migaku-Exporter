@@ -3094,7 +3094,6 @@ const MediaHandler = {
       access = await FirebaseAuth.getAccessToken();
     } catch {
       access = null;
-      // console.log('Firebase auth failed, trying without token')
     }
 
     var mediaMap = new Map();
@@ -3523,17 +3522,6 @@ const ExportProcessor = {
         reviewsByDay.get(dayKey).add(r.cardId);
       });
 
-      Utils.log(`=== REVIEW DEBUG INFO ===`);
-      Utils.log(`Total review records: ${reviews.length}`);
-      Utils.log(`By type - New(0): ${reviewsByType[0]}, Fail(1): ${reviewsByType[1]}, Pass(2): ${reviewsByType[2]}`);
-
-      // Count unique cards per type across all days (matching Migaku's COUNT DISTINCT)
-      const uniqueCardsByType = { 0: new Set(), 1: new Set(), 2: new Set() };
-      reviews.forEach(r => uniqueCardsByType[r.type].add(`${r.cardId}-${r.day}`));
-      Utils.log(`Unique card-day combinations - New(0): ${uniqueCardsByType[0].size}, Fail(1): ${uniqueCardsByType[1].size}, Pass(2): ${uniqueCardsByType[2].size}`);
-      Utils.log(`^^^ This should match what Migaku shows! ^^^`);
-      Utils.log(`If Migaku shows exactly HALF these numbers, we'll just divide by 2.`);
-
       AnkiBuilder.fillRevlogTable(ankiDb, reviews);
 
       const modelMap = AnkiBuilder.insertCollectionMetadata(ankiDb, usedCardTypes, mappings, options.useTemplates, options.ankiTarget || {});
@@ -3726,13 +3714,8 @@ const UI = {
     const backdrop = Utils.safeGetElement("mgkModalBackdrop");
     const modal = Utils.safeGetElement(CONFIG.MODAL_ID);
 
-    // Old skin toggle logic kept for fallback:
-    // const useNative = !!enabled;
-    // const label = Utils.safeGetElement("mgkSkinLabel");
-
     if (backdrop) backdrop.classList.toggle("mgk-native-skin", useNative);
     if (modal) modal.classList.toggle("mgk-native-skin", useNative);
-    // if (label) label.innerText = useNative ? "Skin: Native" : "Skin: Original";
   },
 
   injectStyles: () => {
@@ -5003,15 +4986,6 @@ const UI = {
     }
     updateModeUI();
 
-    // Old skin toggle wiring kept for fallback:
-    // const nativeSkinToggle = Utils.safeGetElement("mgkNativeSkin");
-    // if (nativeSkinToggle) {
-    //   Utils.safeAddListener(nativeSkinToggle, "change", () => {
-    //     UI.setNativeSkin(nativeSkinToggle.checked);
-    //     Storage.saveSettings({ nativeSkin: nativeSkinToggle.checked });
-    //   });
-    // }
-    // UI.setNativeSkin(nativeSkinToggle?.checked ?? false);
     UI.setNativeSkin();
 
 
@@ -5562,9 +5536,6 @@ async function initializeMigakuExporter() {
     };
 
     applyToCheckbox("mgkSimpleMode", settings.simpleMode);
-    // Old skin toggle restore lines:
-    // applyToCheckbox("mgkNativeSkin", settings.nativeSkin);
-    // UI.setNativeSkin(settings.nativeSkin);
     UI.setNativeSkin();
     applyToCheckbox("mgkIncludeImages", settings.includeImages);
     applyToCheckbox("mgkIncludeAudio", settings.includeAudio);
@@ -5640,8 +5611,6 @@ async function initializeMigakuExporter() {
       // save settings to localStorage
       Storage.saveSettings({
         simpleMode: simple,
-        // Old skin toggle setting (fallback):
-        // nativeSkin: Utils.safeGetElement("mgkNativeSkin")?.checked ?? false,
         includeImages: opts.includeImages,
         includeAudio: opts.includeAudio,
         keepSyntax: opts.keepSyntax,
@@ -5790,24 +5759,11 @@ window.addEventListener('unhandledrejection', (event) => {
   Utils.setStatus("Promise rejection - check console", "#ef4444");
 });
 
-// debug stuff - expose on window so I can mess with it in console
 window.migakuExporterV3 = {
-  Utils,
-  Storage,
-  Progress,
-  MediaProcessor,
-  FirebaseAuth,
-  DatabaseOps,
-  FieldMapper,
-  AnkiBuilder,
-  MediaHandler,
-  ExportProcessor,
-  UI,
-  MappingModal,
-  DeckProtection,
-  TutorialManager,
-  initializeMigakuExporter,
-  CONFIG
+  Utils, Storage, Progress, MediaProcessor, FirebaseAuth,
+  DatabaseOps, FieldMapper, AnkiBuilder, MediaHandler,
+  ExportProcessor, UI, MappingModal, DeckProtection,
+  TutorialManager, AnkiConnect, initializeMigakuExporter, CONFIG
 };
 
 // startup + recovery logic (in case migaku's page loads weird)
