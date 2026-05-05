@@ -5,7 +5,7 @@
 // @grant       GM_getResourceURL
 // @grant       GM_xmlhttpRequest
 // @run-at      document-idle
-// @version     2.3
+// @version     2.4
 // @author      marlanbar (AnkiConnect integration) | waraki (Base version) | SirOlaf (Original)
 // @description Migaku → Anki exporter with direct AnkiConnect support
 // @require     data:application/javascript,%3BglobalThis.setImmediate%3DsetTimeout%3B
@@ -538,6 +538,7 @@ const FieldMapper = {
     ];
 
     var fieldNames = FieldMapper.getFieldNames();
+    if (fieldNames.length === 0) fieldNames = CONFIG.MIGAKU_FIELDS;
     var defFields = (cardType && cardType.config && Array.isArray(cardType.config.fields))
       ? cardType.config.fields
       : [];
@@ -669,12 +670,13 @@ const AnkiBuilder = {
       var fields = [];
 
       const fieldNames = FieldMapper.getFieldNames();
+      const effectiveFieldNames = fieldNames.length > 0 ? fieldNames : CONFIG.MIGAKU_FIELDS;
       const pushField = (name) => fields.push({
         font: "Arial", media: [], name, ord: fields.length,
         rtl: false, size: 20, sticky: false
       });
 
-      fieldNames.forEach(fieldName => pushField(fieldName));
+      effectiveFieldNames.forEach(fieldName => pushField(fieldName));
 
       // try to create better templates based on card type
       let template;
