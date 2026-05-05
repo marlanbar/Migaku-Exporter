@@ -1,88 +1,80 @@
 # Migaku → Anki Exporter
 
-A Tampermonkey/Violentmonkey userscript that exports decks from Migaku (https://study.migaku.com) to Anki `.apkg` files, or sends cards **directly to Anki** via AnkiConnect.
+A Tampermonkey/Violentmonkey userscript that sends your Migaku memory cards **directly to Anki** via [AnkiConnect](https://ankiweb.net/shared/info/2055492159).
 
-> **This is a fork by [marlanbar](https://github.com/marlanbar/Migaku-Exporter)** adding AnkiConnect integration on top of the original work.
+> Fork by [marlanbar](https://github.com/marlanbar/Migaku-Exporter) — AnkiConnect integration on top of the original exporter.
 
 ---
 
-## ⚠️ Attribution
+## Attribution
 
 Originally created by **SirOlaf**: https://github.com/SirOlaf/migaku-anki-exporter/  
-Forked and extended by **wa-ra-ki**: https://github.com/wa-ra-ki/Migaku-Exporter  
-Further extended by **marlanbar**: https://github.com/marlanbar/Migaku-Exporter
+Forked by **wa-ra-ki**: https://github.com/wa-ra-ki/Migaku-Exporter  
+Extended by **marlanbar**: https://github.com/marlanbar/Migaku-Exporter
 
 ---
 
 ## Features
 
-- 🔗 **Persistent FAB button** — blue Anki icon always visible on every page. Click to open the exporter.
-- 🔎 **Searchable deck list** — filter by language, search by name.
-- 📦 **Export as `.apkg`** — one file per deck, or merge multiple decks into one.
-- 🃏 **Direct push to Anki** — send cards straight to a running Anki desktop app via AnkiConnect (no file download needed).
-- 📝 **Field mapping** — map Migaku fields to your Anki note type fields.
-- 📑 **Wordlist export** — export known/learning/ignored words as CSV inside a `.zip`.
-- 💾 **Media cache** — images and audio are cached locally to avoid redundant downloads.
-- 🎓 **Interactive tutorial** — onboarding for new users.
+- **Direct push to Anki** — cards go straight into your Anki collection, no file downloads.
+- **Auto-connect** — polls AnkiConnect automatically and shows connection status.
+- **Field mapping** — map each Anki note type field to the corresponding Migaku field.
+- **Searchable deck list** — filter by language, search by name, select multiple.
+- **Merge decks** — combine multiple Migaku decks into one Anki deck.
+- **Media included** — images and audio uploaded automatically.
+- **Duplicate detection** — existing cards are skipped.
+- **Persistent button** — blue Anki icon always visible in the corner.
+
+---
+
+## Requirements
+
+- [Tampermonkey](https://www.tampermonkey.net/) or [Violentmonkey](https://violentmonkey.github.io/)
+- [Anki](https://apps.ankiweb.net/) desktop with [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on installed
 
 ---
 
 ## Installation
 
-1. Install [Tampermonkey](https://www.tampermonkey.net/) (Chrome/Edge) or [Violentmonkey](https://violentmonkey.github.io/) (Firefox/Chromium).
-2. Copy the contents of `Javascript.js` into a new userscript in your manager.
-3. Visit `https://study.migaku.com/` and wait for the page to fully load.
+1. Install a userscript manager (Tampermonkey / Violentmonkey).
+2. Copy the contents of `Javascript.js` into a new userscript.
+3. Visit https://study.migaku.com/ — the blue Anki button appears in the bottom-right.
 
 ---
 
 ## How to use
 
-### Export as .apkg
+1. **Open Anki** (with AnkiConnect running on port 8765).
+2. Click the blue **Anki icon** on Migaku — it auto-connects and shows "Connected to Anki".
+3. Select your **target deck** and **note type** from the dropdowns.
+4. Click **Map Fields** to assign each Anki field to a Migaku source field (saved automatically).
+5. Pick Migaku decks from the list.
+6. Click **Send to Anki** — done.
 
-1. Click the blue **Anki icon** button (bottom-right corner, visible on all pages).
-2. Pick decks from the searchable list (filter by language if needed).
-3. Optionally enable **Merge decks** to combine everything into one file.
-4. Click **Export selected decks** — the `.apkg` file downloads automatically.
-5. Optionally click **Export wordlists** to download known/learning words as CSVs.
-
-### Send directly to Anki (AnkiConnect)
-
-Requires the [AnkiConnect](https://ankiweb.net/shared/info/2055492159) add-on installed in Anki.
-
-1. Open Anki and make sure AnkiConnect is running (default port 8765).
-2. Open the exporter and enable **Send to Anki directly**.
-3. Click **Connect to Anki** — decks and note types will populate automatically.
-4. Select your **target deck** and **note type**.
-5. Click **Map Fields** to map each Anki field to the corresponding Migaku field. The mapping is saved automatically.
-6. Select your Migaku decks and click **Export selected decks** — cards go straight to Anki. Duplicates are skipped automatically.
+If Anki isn't open, the status shows "Anki is not open" and the controls are disabled until you open it.
 
 ---
 
-## Development / Contributing
+## Development
 
-- Uses `sql.js` (v1.13) to parse Migaku's compressed SQLite deck blobs from IndexedDB.
-- Media fetched from Migaku's sync worker using a Firebase bearer token.
-- AnkiConnect requests use `GM_xmlhttpRequest` (with `fetch` fallback) to bypass CORS.
-- Single-file project — all logic lives in `Javascript.js`. See `AGENTS.md` for conventions.
+Single-file project — all logic in `Javascript.js`. See `AGENTS.md` for conventions.
+
+```sh
+node --check Javascript.js   # syntax check
+```
 
 ---
 
 ## FAQ
 
-**Q: Where's the Export button?**  
-A: Click the blue Anki icon in the bottom-right corner — it's visible on every page.
-
-**Q: Can I merge multiple decks into one file?**  
-A: Yes — enable the **Merge decks** toggle before exporting.
-
-**Q: Are images and audio included?**  
-A: Yes, always — images and audio are included automatically.
-
-**Q: Where are my exports saved?**  
-A: In your browser's default downloads folder (`.apkg`), or directly in Anki when using AnkiConnect.
-
-**Q: Can I customise which Anki fields get which Migaku data?**  
-A: Yes — click **Field Mapping** to open the mapping editor.
+**Q: Nothing happens when I click Send to Anki.**  
+A: Make sure Anki is open and AnkiConnect is installed. The status indicator should say "Connected to Anki".
 
 **Q: Will it add duplicate cards?**  
-A: No — when using AnkiConnect, duplicates within the target deck are automatically skipped.
+A: No — duplicates within the target deck are skipped automatically.
+
+**Q: Are images and audio included?**  
+A: Yes, always.
+
+**Q: Can I merge multiple Migaku decks into one Anki deck?**  
+A: Yes — enable the **Merge decks** toggle and select a single target deck.
