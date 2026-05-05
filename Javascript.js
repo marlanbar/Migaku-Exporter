@@ -3039,6 +3039,7 @@ const MediaHandler = {
     const pathSet = new Set();
 
     const fieldNames = FieldMapper.getFieldNames();
+    const iterateCount = fieldNames.length > 0 ? fieldNames.length : CONFIG.MIGAKU_FIELDS.length;
 
     for (const typeKey of cardsByType.keys()) {
       const list = cardsByType.get(typeKey);
@@ -3053,7 +3054,7 @@ const MediaHandler = {
           ...(card.fields ? card.fields.split('\u001f') : [])
         ];
 
-        for (let i = 0; i < fieldNames.length; i++) {
+        for (let i = 0; i < iterateCount; i++) {
           const value = allValues[i] || "";
           if (!value || !value.trim()) continue;
 
