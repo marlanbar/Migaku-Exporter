@@ -1,11 +1,11 @@
 // ==UserScript==
-// @name        Migaku deck exporter V2
+// @name        Migaku deck exporter V3
 // @namespace   http://tampermonkey.net/
 // @match       https://study.migaku.com/*
 // @grant       GM_getResourceURL
 // @grant       GM_xmlhttpRequest
 // @run-at      document-idle
-// @version     2.4
+// @version     3.0.3
 // @author      marlanbar (AnkiConnect integration) | waraki (Base version) | SirOlaf (Original)
 // @description Migaku → Anki exporter with direct AnkiConnect support
 // @require     data:application/javascript,%3BglobalThis.setImmediate%3DsetTimeout%3B
@@ -4705,16 +4705,8 @@ const UI = {
       <div class="UiAlertModal__header">
         <div class="mgk-modal-titlewrap">
           <h3 class="UiTypo UiTypo__heading3 -heading">Migaku → Anki Exporter</h3>
-          <div class="mgk-subtitle">Created by waraki - Forked from SirOlaf ❤️</div>
         </div>
         <div class="mgk-modal-actions">
-          <div id="mgkModeLabel" style="font-weight:600;background:var(--secondary-bg);padding:8px 12px;border-radius:8px;color:var(--text-secondary);font-size:0.85rem;border:1px solid var(--border);">Mode: Simple</div>
-          <label class="mgk-checkbox" title="Toggle Simple / Advanced">
-            <input id="mgkSimpleMode" type="checkbox" checked>
-            <span class="mgk-toggle-track">
-              <span class="mgk-toggle-knob"></span>
-            </span>
-          </label>
           <button id="mgkCloseBtn" class="UiButton -flat" type="button" aria-label="Close export modal"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Close</span></div></button>
         </div>
       </div>
@@ -4732,151 +4724,60 @@ const UI = {
             <div id="mgkDeckList" class="mgk-list" role="listbox" tabindex="0" aria-label="Deck list"></div>
           </div>
 
-          <div class="mgk-media-wrap">
-            <button id="mgkMediaBtn" class="mgk-media-btn">Include media ▾</button>
-            <div id="mgkMediaPopup" class="mgk-media-popup" aria-hidden="true">
-              <div style="display:flex;flex-direction:column;gap:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <div class="mgk-small">Images</div>
-                  <label class="mgk-checkbox">
-                    <input id="mgkIncludeImages" type="checkbox" checked>
-                    <span class="mgk-toggle-track">
-                      <span class="mgk-toggle-knob"></span>
-                    </span>
-                  </label>
-                </div>
-                <div style="display:flex;justify-content:space-between;align-items:center">
-                  <div class="mgk-small">Audio</div>
-                  <label class="mgk-checkbox">
-                    <input id="mgkIncludeAudio" type="checkbox" checked>
-                    <span class="mgk-toggle-track">
-                      <span class="mgk-toggle-knob"></span>
-                    </span>
-                  </label>
-                </div>
-                <div style="display:flex;gap:8px;justify-content:flex-end;">
-                  <button id="mgkMediaPopupClose" class="mgk-button mgk-secondary">Done</button>
-                </div>
-              </div>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;gap:8px;align-items:center;">
+              <label class="mgk-small">Merge decks</label>
+              <label class="mgk-checkbox">
+                <input id="mgkMergeSelected" type="checkbox">
+                <span class="mgk-toggle-track"><span class="mgk-toggle-knob"></span></span>
+              </label>
+            </div>
+            <div style="display:flex;gap:8px;">
+              <button id="mgkOpenMappingsBtn" class="UiButton -flat" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Field Mapping</span></div></button>
+              <button id="mgkExportWordlistBtn" class="UiButton -flat" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Export wordlists</span></div></button>
             </div>
           </div>
         </div>
 
-        <div class="mgk-row">
+        <div class="mgk-row" style="margin-top:8px;">
           <div style="flex:1">
             <div class="mgk-small">Selected decks</div>
             <div id="mgkSelectedBadge" class="mgk-small" style="padding:12px;border-radius:var(--border-radius);background:var(--secondary-bg);border:1px solid var(--border);margin-top:8px;color:var(--text-primary);">No deck selected</div>
-          </div>
-
-          <div style="width:360px;display:flex;flex-direction:column;gap:12px">
-            <div id="mgkSimplifiedArea" style="display:block;">
-              <div class="mgk-small">File size preset</div>
-              <div id="mgkPresetRoot" style="position:relative;">
-                <div id="mgkPresetToggle" class="mgk-preset">
-                  <div class="mgk-preset-label" id="mgkPresetLabel">Normal</div>
-                  <div class="mgk-preset-arrow">▾</div>
-                </div>
-                <div id="mgkPresetMenu" class="mgk-preset-menu" aria-hidden="true"></div>
-              </div>
-
-              <div style="display:flex;gap:16px;align-items:center;margin-top:12px;">
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <label class="mgk-small">Keep syntax</label>
-                  <label class="mgk-checkbox">
-                    <input id="mgkKeepSyntax" type="checkbox">
-                    <span class="mgk-toggle-track">
-                      <span class="mgk-toggle-knob"></span>
-                    </span>
-                  </label>
-                </div>
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <label class="mgk-small">Merge decks</label>
-                  <label class="mgk-checkbox">
-                    <input id="mgkMergeSelected" type="checkbox">
-                    <span class="mgk-toggle-track">
-                      <span class="mgk-toggle-knob"></span>
-                    </span>
-                  </label>
-                </div>
-              </div>
-            </div>
-
-            <div id="mgkAdvancedArea" style="display:none;">
-              <div style="display:flex;gap:12px;flex-direction:column;">
-                <div style="display:flex;gap:8px;align-items:center;">
-                  <label class="mgk-small">Convert media</label>
-                  <label class="mgk-checkbox">
-                    <input id="mgkConvertMedia" type="checkbox">
-                    <span class="mgk-toggle-track">
-                      <span class="mgk-toggle-knob"></span>
-                    </span>
-                  </label>
-                </div>
-                <div style="display:flex;gap:12px;align-items:center;">
-                  <div style="flex:1">
-                    <div class="mgk-small">Image max px</div>
-                    <input id="mgkImageMaxDim" class="mgk-input" type="number" value="1024">
-                  </div>
-                  <div style="flex:1">
-                    <div class="mgk-small">Image quality</div>
-                    <input id="mgkImageQuality" class="mgk-input" type="number" step="0.05" min="0.1" max="1" value="0.85">
-                  </div>
-                </div>
-                <div style="display:flex;gap:12px;align-items:center;">
-                  <div style="flex:1">
-                    <div class="mgk-small">Audio sample rate (Hz)</div>
-                    <input id="mgkAudioSampleRate" class="mgk-input" type="number" value="22050">
-                  </div>
-                  <div style="flex:1">
-                    <div class="mgk-small">Max media size (MB)</div>
-                    <input id="mgkMaxMediaSize" class="mgk-input" type="number" value="10">
-                  </div>
-                </div>
-              </div>
-
-              <div style="display:flex;gap:8px;align-items:center;margin-top:12px;">
-                <label class="mgk-small">Auto-build templates</label>
-                <label class="mgk-checkbox">
-                  <input id="mgkUseTemplates" type="checkbox" checked>
-                  <span class="mgk-toggle-track">
-                    <span class="mgk-toggle-knob"></span>
-                  </span>
-                </label>
-              </div>
-
-              <div style="margin-top:12px;">
-                <button id="mgkOpenMappingsBtn" class="UiButton -flat" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Open Field Mapping</span></div></button>
-              </div>
-            </div>
           </div>
         </div>
 
         <div class="mgk-row" style="margin-top:12px;flex-direction:column;gap:10px;">
           <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div class="mgk-small" style="font-weight:600;">Anki Target <span style="font-weight:400;opacity:0.6;">(optional – requires AnkiConnect plugin)</span></div>
-            <div style="display:flex;gap:8px;align-items:center;">
+            <div class="mgk-small" style="font-weight:600;">Send to Anki directly <span style="font-weight:400;opacity:0.6;">(requires AnkiConnect)</span></div>
+            <label class="mgk-checkbox">
+              <input id="mgkAnkiEnable" type="checkbox">
+              <span class="mgk-toggle-track"><span class="mgk-toggle-knob"></span></span>
+            </label>
+          </div>
+          <div id="mgkAnkiTargetSection" style="display:none;flex-direction:column;gap:10px;">
+            <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;">
               <span id="mgkAnkiConnectStatus" style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Not connected</span>
               <button id="mgkAnkiConnectBtn" class="UiButton -flat" type="button" style="padding:4px 12px;"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Connect to Anki</span></div></button>
             </div>
-          </div>
-          <div style="display:flex;gap:12px;">
-            <div style="flex:1;">
-              <div class="mgk-small">Target deck in Anki</div>
-              <select id="mgkAnkiTargetDeck" class="mgk-language-select" style="width:100%;margin-top:4px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--secondary-bg);color:var(--text);font-size:13px;cursor:pointer;">
-                <option value="">Use Migaku deck names</option>
-              </select>
-            </div>
-            <div style="flex:1;">
-              <div class="mgk-small">Note type in Anki</div>
-              <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
-                <select id="mgkAnkiTargetNoteType" class="mgk-language-select" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--secondary-bg);color:var(--text);font-size:13px;cursor:pointer;">
-                  <option value="">Use Migaku note type</option>
+            <div style="display:flex;gap:12px;">
+              <div style="flex:1;">
+                <div class="mgk-small">Target deck in Anki</div>
+                <select id="mgkAnkiTargetDeck" class="mgk-language-select" style="width:100%;margin-top:4px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--secondary-bg);color:var(--text);font-size:13px;cursor:pointer;">
+                  <option value="">Use Migaku deck names</option>
                 </select>
-                <button id="mgkAnkiMapFieldsBtn" class="UiButton -flat" type="button" style="white-space:nowrap;flex-shrink:0;"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Map Fields</span></div></button>
+              </div>
+              <div style="flex:1;">
+                <div class="mgk-small">Note type in Anki</div>
+                <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
+                  <select id="mgkAnkiTargetNoteType" class="mgk-language-select" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--secondary-bg);color:var(--text);font-size:13px;cursor:pointer;">
+                    <option value="">Use Migaku note type</option>
+                  </select>
+                  <button id="mgkAnkiMapFieldsBtn" class="UiButton -flat" type="button" style="white-space:nowrap;flex-shrink:0;"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Map Fields</span></div></button>
+                </div>
               </div>
             </div>
+            <div id="mgkAnkiFieldMappingSection" style="display:none;"></div>
           </div>
-          <div id="mgkAnkiFieldMappingSection" style="display:none;"></div>
         </div>
 
         <div id="mgkexporterStatusMessage" class="mgk-status">Ready</div>
@@ -4884,7 +4785,6 @@ const UI = {
 
       <div class="UiAlertModal__footer">
           <input type="hidden" id="mgkDeckSelectHidden">
-          <button id="mgkExportWordlistBtn" class="UiButton -flat" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Export wordlists</span></div></button>
           <button id="mgkExportDeckBtn" class="UiButton -gradient" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Export selected decks</span></div></button>
       </div>
       </div>
@@ -4900,96 +4800,18 @@ const UI = {
       if (e.target === backdrop) UI.hideMainModal();
     });
 
-
-    const mediaBtn = Utils.safeGetElement("mgkMediaBtn");
-    const mediaPopup = Utils.safeGetElement("mgkMediaPopup");
-    function toggleMediaPopup(show) {
-      if (show === undefined) show = !mediaPopup.classList.contains("show");
-      if (show) mediaPopup.classList.add("show");
-      else mediaPopup.classList.remove("show");
+    // AnkiEnable toggle shows/hides the target section
+    const ankiEnableToggle = Utils.safeGetElement("mgkAnkiEnable");
+    const ankiTargetSection = Utils.safeGetElement("mgkAnkiTargetSection");
+    function updateAnkiSection() {
+      const enabled = ankiEnableToggle?.checked ?? false;
+      if (ankiTargetSection) ankiTargetSection.style.display = enabled ? "flex" : "none";
+      Storage.saveSettings({ ankiEnabled: enabled });
     }
-
-    Utils.safeAddListener(mediaBtn, "click", (e) => {
-      e.stopPropagation();
-      toggleMediaPopup(true);
-    });
-    Utils.safeAddListener(Utils.safeGetElement("mgkMediaPopupClose"), "click", () => toggleMediaPopup(false));
-
-    document.addEventListener("click", (e) => {
-      const popup = Utils.safeGetElement("mgkMediaPopup");
-      const btn = Utils.safeGetElement("mgkMediaBtn");
-      if (!popup || !btn) return;
-      if (!popup.contains(e.target) && !btn.contains(e.target)) {
-        popup.classList.remove("show");
-      }
-    });
-
-
-    const presetRoot = Utils.safeGetElement("mgkPresetRoot");
-    const presetToggle = Utils.safeGetElement("mgkPresetToggle");
-    const presetLabel = Utils.safeGetElement("mgkPresetLabel");
-    const presetMenu = Utils.safeGetElement("mgkPresetMenu");
-
-    for (const key of Object.keys(CONFIG.PRESETS)) {
-      const item = document.createElement("div");
-      item.className = "mgk-preset-item";
-      item.dataset.preset = key;
-      item.innerText = CONFIG.PRESETS[key].label || key;
-      if (key === "normal") item.classList.add("selected");
-
-      Utils.safeAddListener(item, "click", (e) => {
-        const prev = presetMenu.querySelector(".selected");
-        if (prev) prev.classList.remove("selected");
-        item.classList.add("selected");
-        presetLabel.innerText = CONFIG.PRESETS[key].label || key;
-        presetMenu.classList.remove("show");
-        Storage.saveSettings({ fileSizePreset: key });
-      });
-      presetMenu.appendChild(item);
-    }
-
-    Utils.safeAddListener(presetToggle, "click", (e) => {
-      e.stopPropagation();
-      presetMenu.classList.toggle("show");
-    });
-
-    document.addEventListener("click", (e) => {
-      if (presetRoot && !presetRoot.contains(e.target)) {
-        presetMenu.classList.remove("show");
-      }
-    });
-
-
-    const simpleToggle = Utils.safeGetElement("mgkSimpleMode");
-    function updateModeUI() {
-      const simple = simpleToggle?.checked ?? true;
-      const modeLabel = Utils.safeGetElement("mgkModeLabel");
-      if (modeLabel) modeLabel.innerText = simple ? "Mode: Simple" : "Mode: Advanced";
-
-      const simplified = Utils.safeGetElement("mgkSimplifiedArea");
-      const advanced = Utils.safeGetElement("mgkAdvancedArea");
-
-      if (simplified && advanced) {
-        if (simple) {
-          simplified.style.display = "block";
-          advanced.style.display = "none";
-        } else {
-          simplified.style.display = "none";
-          advanced.style.display = "block";
-        }
-      }
-    }
-
-    if (simpleToggle) {
-      Utils.safeAddListener(simpleToggle, "change", () => {
-        updateModeUI();
-        Storage.saveSettings({ simpleMode: simpleToggle.checked });
-      });
-    }
-    updateModeUI();
+    Utils.safeAddListener(ankiEnableToggle, "change", updateAnkiSection);
+    updateAnkiSection();
 
     UI.setNativeSkin();
-
 
     Utils.safeAddListener(Utils.safeGetElement("mgkOpenMappingsBtn"), "click", () => {
       MappingModal.open();
@@ -5306,12 +5128,6 @@ const TutorialManager = {
       sel: '#mgkExportDeckBtn',
       text: 'Click <strong>Export selected decks</strong> to generate your Anki .apkg file.',
       pos: 'top',
-      advance: 'click',
-    },
-    {
-      sel: 'label:has(#mgkSimpleMode) .mgk-toggle-track',
-      text: 'You can toggle between <strong>Simple</strong> and <strong>Advanced</strong> mode here for more export options.',
-      pos: 'bottom',
       advance: 'gotit',
     },
   ],
@@ -5508,47 +5324,21 @@ async function initializeMigakuExporter() {
     const lang = document.querySelector("main.MIGAKU-SRS")?.getAttribute?.("data-mgk-lang-selected") || null;
     UI.populateDeckListAndWire(decks, lang);
 
-    // default export settings
-    const settings = {
-      simpleMode: true,
-      includeImages: true,
-      includeAudio: true,
-      keepSyntax: false,
-      convertMedia: false,
-      enableImageConversion: true,
-      imageMaxDimension: 1024,
-      imageQuality: 0.85,
-      enableAudioConversion: true,
-      audioSampleRate: 22050,
-      maxMediaSizeMB: 10,
-      mergeSelected: false,
-      useTemplates: true,
-      fileSizePreset: "normal",
-      ...Storage.loadSettings()
-    };
-
+    // restore persisted settings
+    const settings = { mergeSelected: false, ankiEnabled: false, ...Storage.loadSettings() };
 
     const applyToCheckbox = (id, value) => {
       const el = Utils.safeGetElement(id);
       if (el && el.type === "checkbox") el.checked = !!value;
     };
-    const applyToInput = (id, value) => {
-      const el = Utils.safeGetElement(id);
-      if (el) el.value = value;
-    };
 
-    applyToCheckbox("mgkSimpleMode", settings.simpleMode);
     UI.setNativeSkin();
-    applyToCheckbox("mgkIncludeImages", settings.includeImages);
-    applyToCheckbox("mgkIncludeAudio", settings.includeAudio);
-    applyToCheckbox("mgkKeepSyntax", settings.keepSyntax);
-    applyToCheckbox("mgkConvertMedia", settings.convertMedia);
-    applyToInput("mgkImageMaxDim", settings.imageMaxDimension || 1024);
-    applyToInput("mgkImageQuality", settings.imageQuality || 0.85);
-    applyToInput("mgkAudioSampleRate", settings.audioSampleRate || 22050);
-    applyToInput("mgkMaxMediaSize", settings.maxMediaSizeMB || 10);
     applyToCheckbox("mgkMergeSelected", settings.mergeSelected);
-    applyToCheckbox("mgkUseTemplates", settings.useTemplates);
+    applyToCheckbox("mgkAnkiEnable", settings.ankiEnabled);
+
+    // Restore AnkiEnable toggle UI state
+    const ankiTargetSection = Utils.safeGetElement("mgkAnkiTargetSection");
+    if (ankiTargetSection) ankiTargetSection.style.display = settings.ankiEnabled ? "flex" : "none";
 
 
     Utils.safeAddListener(Utils.safeGetElement("mgkExportDeckBtn"), "click", async () => {
@@ -5565,87 +5355,47 @@ async function initializeMigakuExporter() {
         return;
       }
 
-      const simple = Utils.safeGetElement("mgkSimpleMode")?.checked ?? true;
-      let opts = {};
-      const keepSyntax = Utils.safeGetElement("mgkKeepSyntax")?.checked ?? false;
-      const includeImages = Utils.safeGetElement("mgkIncludeImages")?.checked ?? true;
-      const includeAudio = Utils.safeGetElement("mgkIncludeAudio")?.checked ?? true;
+      const preset = CONFIG.PRESETS.normal;
+      const opts = {
+        includeMedia: true,
+        includeImages: true,
+        includeAudio: true,
+        keepSyntax: false,
+        convertMedia: preset.enableImageConversion || preset.enableAudioConversion,
+        enableImageConversion: preset.enableImageConversion,
+        imageMaxDimension: preset.imageMaxDimension,
+        imageQuality: preset.imageQuality,
+        enableAudioConversion: preset.enableAudioConversion,
+        audioSampleRate: preset.audioSampleRate,
+        maxMediaSizeBytes: (preset.maxMediaSizeMB || 10) * 1024 * 1024,
+        mergeSelected: Utils.safeGetElement("mgkMergeSelected")?.checked ?? false,
+        useTemplates: true,
+        mediaWorkerCount: 5
+      };
 
-      if (simple) {
-        const presetMenu = Utils.safeGetElement("mgkPresetMenu");
-        const sel = presetMenu?.querySelector(".mgk-preset-item.selected")?.dataset?.preset || "normal";
-        const mapping = CONFIG.PRESETS[sel] || CONFIG.PRESETS.normal;
-        opts = {
-          includeMedia: (includeImages || includeAudio),
-          includeImages,
-          includeAudio,
-          keepSyntax,
-          convertMedia: mapping.enableImageConversion || mapping.enableAudioConversion,
-          enableImageConversion: mapping.enableImageConversion,
-          imageMaxDimension: mapping.imageMaxDimension,
-          imageQuality: mapping.imageQuality,
-          enableAudioConversion: mapping.enableAudioConversion,
-          audioSampleRate: mapping.audioSampleRate,
-          maxMediaSizeBytes: (mapping.maxMediaSizeMB || 10) * 1024 * 1024,
-          mergeSelected: Utils.safeGetElement("mgkMergeSelected")?.checked ?? false,
-          useTemplates: Utils.safeGetElement("mgkUseTemplates")?.checked ?? true,
-          mediaWorkerCount: 5
-        };
-      } else {
-        opts = {
-          includeMedia: (includeImages || includeAudio),
-          includeImages,
-          includeAudio,
-          keepSyntax,
-          convertMedia: Utils.safeGetElement("mgkConvertMedia")?.checked ?? false,
-          enableImageConversion: true,
-          imageMaxDimension: parseInt(Utils.safeGetElement("mgkImageMaxDim")?.value || "1024"),
-          imageQuality: parseFloat(Utils.safeGetElement("mgkImageQuality")?.value || "0.85"),
-          enableAudioConversion: true,
-          audioSampleRate: parseInt(Utils.safeGetElement("mgkAudioSampleRate")?.value || "22050"),
-          maxMediaSizeBytes: (parseFloat(Utils.safeGetElement("mgkMaxMediaSize")?.value || "10") || 10) * 1024 * 1024,
-          mergeSelected: Utils.safeGetElement("mgkMergeSelected")?.checked ?? false,
-          useTemplates: Utils.safeGetElement("mgkUseTemplates")?.checked ?? true,
-          mediaWorkerCount: 5
-        };
-      }
-
-      // save settings to localStorage
-      Storage.saveSettings({
-        simpleMode: simple,
-        includeImages: opts.includeImages,
-        includeAudio: opts.includeAudio,
-        keepSyntax: opts.keepSyntax,
-        convertMedia: opts.convertMedia,
-        enableImageConversion: opts.enableImageConversion,
-        imageMaxDimension: opts.imageMaxDimension,
-        imageQuality: opts.imageQuality,
-        enableAudioConversion: opts.enableAudioConversion,
-        audioSampleRate: opts.audioSampleRate,
-        maxMediaSizeMB: (opts.maxMediaSizeBytes || 0) / (1024 * 1024),
-        mergeSelected: opts.mergeSelected,
-        useTemplates: opts.useTemplates,
-        fileSizePreset: Utils.safeGetElement("mgkPresetMenu")?.querySelector(".mgk-preset-item.selected")?.dataset?.preset || "normal"
-      });
+      Storage.saveSettings({ mergeSelected: opts.mergeSelected });
 
       Utils.setStatus("Starting export(s)...", "#f59e0b");
       Progress.show("Starting...", 0);
 
-      // Read AnkiConnect target selections
-      const deckSelEl = Utils.safeGetElement("mgkAnkiTargetDeck");
-      const noteTypeSelEl = Utils.safeGetElement("mgkAnkiTargetNoteType");
-      const targetDeckName = deckSelEl?.value || "";
-      const noteTypeRaw = noteTypeSelEl?.value || "";
-      const savedAnkiTarget = Storage.loadAnkiTarget();
+      // Read AnkiConnect target selections (only when enabled)
+      const ankiEnabled = Utils.safeGetElement("mgkAnkiEnable")?.checked ?? false;
       opts.ankiTarget = {};
-      if (targetDeckName) opts.ankiTarget.deckName = targetDeckName;
-      if (savedAnkiTarget.fieldMapping) opts.ankiTarget.fieldMapping = savedAnkiTarget.fieldMapping;
-      if (noteTypeRaw) {
-        try {
-          const nt = JSON.parse(noteTypeRaw);
-          try { nt.fields = await AnkiConnect.getFieldNames(nt.name); } catch {}
-          opts.ankiTarget.noteType = nt;
-        } catch {}
+      if (ankiEnabled) {
+        const deckSelEl = Utils.safeGetElement("mgkAnkiTargetDeck");
+        const noteTypeSelEl = Utils.safeGetElement("mgkAnkiTargetNoteType");
+        const targetDeckName = deckSelEl?.value || "";
+        const noteTypeRaw = noteTypeSelEl?.value || "";
+        const savedAnkiTarget = Storage.loadAnkiTarget();
+        if (targetDeckName) opts.ankiTarget.deckName = targetDeckName;
+        if (savedAnkiTarget.fieldMapping) opts.ankiTarget.fieldMapping = savedAnkiTarget.fieldMapping;
+        if (noteTypeRaw) {
+          try {
+            const nt = JSON.parse(noteTypeRaw);
+            try { nt.fields = await AnkiConnect.getFieldNames(nt.name); } catch {}
+            opts.ankiTarget.noteType = nt;
+          } catch {}
+        }
       }
 
       const mappings = Storage.loadMappings();
