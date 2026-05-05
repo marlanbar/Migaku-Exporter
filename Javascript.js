@@ -5,7 +5,7 @@
 // @grant       GM_getResourceURL
 // @grant       GM_xmlhttpRequest
 // @run-at      document-idle
-// @version     3.1.1
+// @version     3.1.2
 // @author      marlanbar (AnkiConnect integration) | waraki (Base version) | SirOlaf (Original)
 // @description Migaku → Anki exporter with direct AnkiConnect support
 // @require     data:application/javascript,%3BglobalThis.setImmediate%3DsetTimeout%3B
@@ -5445,7 +5445,7 @@ async function initializeMigakuExporter() {
         includeMedia: true,
         includeImages: true,
         includeAudio: true,
-        keepSyntax: false,
+        keepSyntax: true,
         convertMedia: preset.enableImageConversion || preset.enableAudioConversion,
         enableImageConversion: preset.enableImageConversion,
         imageMaxDimension: preset.imageMaxDimension,
