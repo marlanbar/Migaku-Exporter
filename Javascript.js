@@ -5,7 +5,7 @@
 // @grant       GM_getResourceURL
 // @grant       GM_xmlhttpRequest
 // @run-at      document-idle
-// @version     3.0.3
+// @version     3.1.0
 // @author      marlanbar (AnkiConnect integration) | waraki (Base version) | SirOlaf (Original)
 // @description Migaku → Anki exporter with direct AnkiConnect support
 // @require     data:application/javascript,%3BglobalThis.setImmediate%3DsetTimeout%3B
@@ -3291,7 +3291,15 @@ const ExportProcessor = {
           deckName,
           modelName: modelName || (ct ? ct.name : 'Basic'),
           fields: fieldsObj,
-          options: { allowDuplicate: false, duplicateScope: 'deck' },
+          options: {
+            allowDuplicate: false,
+            duplicateScope: 'deck',
+            duplicateScopeOptions: {
+              deckName: deckName,
+              checkChildren: true,
+              checkAllModels: true
+            }
+          },
           tags: []
         });
         processed++;
@@ -3462,8 +3470,14 @@ const ExportProcessor = {
       throw new Error(msg);
     }
 
-    // Direct push to Anki via AnkiConnect when a target deck is selected
-    if (options.ankiTarget && options.ankiTarget.deckName) {
+    // Direct push to Anki via AnkiConnect
+    if (options.ankiTarget) {
+      const targetDeckName = options.ankiTarget.deckName;
+      if (!targetDeckName) {
+        Utils.setStatus("Please select a target deck in Anki", "#ef4444");
+        Progress.hide();
+        return;
+      }
       Progress.show("Connecting to Anki...", 0);
       const mediaDb = await MediaHandler.openLocalMediaCacheDb();
       if (options.includeMedia && mediaDb) {
@@ -3471,7 +3485,7 @@ const ExportProcessor = {
       }
       Progress.show("Sending cards to Anki...", 5);
       const added = await ExportProcessor.pushToAnkiDirect(mediaDb, cardsByType, cardTypes, options, allCards.length);
-      Utils.setStatus(`Done! ${added} card(s) added to "${options.ankiTarget.deckName}"`, "#10b981");
+      Utils.setStatus(`Done! ${added} card(s) added to "${targetDeckName}"`, "#10b981");
       Progress.set(100, "Complete");
       Progress.hide();
       return;
@@ -4732,10 +4746,6 @@ const UI = {
                 <span class="mgk-toggle-track"><span class="mgk-toggle-knob"></span></span>
               </label>
             </div>
-            <div style="display:flex;gap:8px;">
-              <button id="mgkOpenMappingsBtn" class="UiButton -flat" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Field Mapping</span></div></button>
-              <button id="mgkExportWordlistBtn" class="UiButton -flat" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Export wordlists</span></div></button>
-            </div>
           </div>
         </div>
 
@@ -4747,30 +4757,22 @@ const UI = {
         </div>
 
         <div class="mgk-row" style="margin-top:12px;flex-direction:column;gap:10px;">
-          <div style="display:flex;justify-content:space-between;align-items:center;">
-            <div class="mgk-small" style="font-weight:600;">Send to Anki directly <span style="font-weight:400;opacity:0.6;">(requires AnkiConnect)</span></div>
-            <label class="mgk-checkbox">
-              <input id="mgkAnkiEnable" type="checkbox">
-              <span class="mgk-toggle-track"><span class="mgk-toggle-knob"></span></span>
-            </label>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span id="mgkAnkiConnectStatus" style="font-size:0.8rem;color:rgba(255,255,255,0.5);">Connecting to Anki...</span>
           </div>
-          <div id="mgkAnkiTargetSection" style="display:none;flex-direction:column;gap:10px;">
-            <div style="display:flex;justify-content:flex-end;align-items:center;gap:8px;">
-              <span id="mgkAnkiConnectStatus" style="font-size:0.75rem;color:rgba(255,255,255,0.5);">Not connected</span>
-              <button id="mgkAnkiConnectBtn" class="UiButton -flat" type="button" style="padding:4px 12px;"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Connect to Anki</span></div></button>
-            </div>
+          <div id="mgkAnkiTargetSection" style="display:flex;flex-direction:column;gap:10px;opacity:0.5;pointer-events:none;">
             <div style="display:flex;gap:12px;">
               <div style="flex:1;">
                 <div class="mgk-small">Target deck in Anki</div>
                 <select id="mgkAnkiTargetDeck" class="mgk-language-select" style="width:100%;margin-top:4px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--secondary-bg);color:var(--text);font-size:13px;cursor:pointer;">
-                  <option value="">Use Migaku deck names</option>
+                  <option value="">— Select a deck —</option>
                 </select>
               </div>
               <div style="flex:1;">
                 <div class="mgk-small">Note type in Anki</div>
                 <div style="display:flex;gap:6px;align-items:center;margin-top:4px;">
                   <select id="mgkAnkiTargetNoteType" class="mgk-language-select" style="flex:1;padding:8px 12px;border-radius:8px;border:1px solid var(--border);background:var(--secondary-bg);color:var(--text);font-size:13px;cursor:pointer;">
-                    <option value="">Use Migaku note type</option>
+                    <option value="">— Select note type —</option>
                   </select>
                   <button id="mgkAnkiMapFieldsBtn" class="UiButton -flat" type="button" style="white-space:nowrap;flex-shrink:0;"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Map Fields</span></div></button>
                 </div>
@@ -4785,7 +4787,7 @@ const UI = {
 
       <div class="UiAlertModal__footer">
           <input type="hidden" id="mgkDeckSelectHidden">
-          <button id="mgkExportDeckBtn" class="UiButton -gradient" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Export selected decks</span></div></button>
+          <button id="mgkExportDeckBtn" class="UiButton -gradient" type="button"><div class="UiButton__text"><span class="UiTypo UiTypo__buttonText">Send to Anki</span></div></button>
       </div>
       </div>
     `;
@@ -4800,22 +4802,74 @@ const UI = {
       if (e.target === backdrop) UI.hideMainModal();
     });
 
-    // AnkiEnable toggle shows/hides the target section
-    const ankiEnableToggle = Utils.safeGetElement("mgkAnkiEnable");
-    const ankiTargetSection = Utils.safeGetElement("mgkAnkiTargetSection");
-    function updateAnkiSection() {
-      const enabled = ankiEnableToggle?.checked ?? false;
-      if (ankiTargetSection) ankiTargetSection.style.display = enabled ? "flex" : "none";
-      Storage.saveSettings({ ankiEnabled: enabled });
-    }
-    Utils.safeAddListener(ankiEnableToggle, "change", updateAnkiSection);
-    updateAnkiSection();
-
     UI.setNativeSkin();
+  },
 
-    Utils.safeAddListener(Utils.safeGetElement("mgkOpenMappingsBtn"), "click", () => {
-      MappingModal.open();
-    });
+  _ankiPollTimer: null,
+  _ankiConnected: false,
+
+  startAnkiPolling: () => {
+    UI.stopAnkiPolling();
+    UI._ankiConnected = false;
+    UI._ankiPollTick();
+    UI._ankiPollTimer = setInterval(() => UI._ankiPollTick(), 3000);
+  },
+
+  stopAnkiPolling: () => {
+    if (UI._ankiPollTimer) {
+      clearInterval(UI._ankiPollTimer);
+      UI._ankiPollTimer = null;
+    }
+  },
+
+  _ankiPollTick: async () => {
+    const statusEl = Utils.safeGetElement("mgkAnkiConnectStatus");
+    const targetSection = Utils.safeGetElement("mgkAnkiTargetSection");
+    try {
+      const connected = await AnkiConnect.testConnection();
+      if (!connected) throw new Error("No response");
+      if (!UI._ankiConnected) {
+        UI._ankiConnected = true;
+        if (statusEl) { statusEl.textContent = "Connected to Anki"; statusEl.style.color = "#10b981"; }
+        if (targetSection) { targetSection.style.opacity = "1"; targetSection.style.pointerEvents = "auto"; }
+        await UI._populateAnkiDropdowns();
+      }
+    } catch {
+      if (UI._ankiConnected || !statusEl?.textContent?.includes("not open")) {
+        UI._ankiConnected = false;
+        if (statusEl) { statusEl.textContent = "Anki is not open — install AnkiConnect and open Anki"; statusEl.style.color = "#ef4444"; }
+        if (targetSection) { targetSection.style.opacity = "0.5"; targetSection.style.pointerEvents = "none"; }
+      }
+    }
+  },
+
+  _populateAnkiDropdowns: async () => {
+    const deckSel = Utils.safeGetElement("mgkAnkiTargetDeck");
+    const noteTypeSel = Utils.safeGetElement("mgkAnkiTargetNoteType");
+    if (!deckSel || !noteTypeSel) return;
+    try {
+      const [decks, noteTypes] = await Promise.all([
+        AnkiConnect.getDeckNames(),
+        AnkiConnect.getNoteTypeNamesAndIds()
+      ]);
+      const saved = Storage.loadAnkiTarget();
+      deckSel.innerHTML = '<option value="">— Select a deck —</option>';
+      decks.sort().forEach(name => {
+        const opt = document.createElement("option");
+        opt.value = name; opt.textContent = name;
+        if (saved.deckName === name) opt.selected = true;
+        deckSel.appendChild(opt);
+      });
+      noteTypeSel.innerHTML = '<option value="">— Select note type —</option>';
+      Object.entries(noteTypes).sort(([a],[b]) => a.localeCompare(b)).forEach(([name, id]) => {
+        const opt = document.createElement("option");
+        opt.value = JSON.stringify({ name, id: Number(id) }); opt.textContent = name;
+        if (saved.noteTypeName === name) opt.selected = true;
+        noteTypeSel.appendChild(opt);
+      });
+    } catch (e) {
+      Utils.log("Failed to populate Anki dropdowns:", e);
+    }
   },
 
   showMainModal: () => {
@@ -4824,10 +4878,12 @@ const UI = {
     if (backdrop && modal) {
       backdrop.style.display = "flex";
       requestAnimationFrame(() => modal.classList.add("show"));
+      UI.startAnkiPolling();
     }
   },
 
   hideMainModal: () => {
+    UI.stopAnkiPolling();
     const backdrop = Utils.safeGetElement("mgkModalBackdrop");
     const modal = Utils.safeGetElement(CONFIG.MODAL_ID);
     if (modal) {
@@ -5126,7 +5182,7 @@ const TutorialManager = {
     },
     {
       sel: '#mgkExportDeckBtn',
-      text: 'Click <strong>Export selected decks</strong> to generate your Anki .apkg file.',
+      text: 'Click <strong>Export selected decks</strong> to send cards to Anki.',
       pos: 'top',
       advance: 'gotit',
     },
@@ -5325,7 +5381,7 @@ async function initializeMigakuExporter() {
     UI.populateDeckListAndWire(decks, lang);
 
     // restore persisted settings
-    const settings = { mergeSelected: false, ankiEnabled: false, ...Storage.loadSettings() };
+    const settings = { mergeSelected: false, ...Storage.loadSettings() };
 
     const applyToCheckbox = (id, value) => {
       const el = Utils.safeGetElement(id);
@@ -5334,11 +5390,6 @@ async function initializeMigakuExporter() {
 
     UI.setNativeSkin();
     applyToCheckbox("mgkMergeSelected", settings.mergeSelected);
-    applyToCheckbox("mgkAnkiEnable", settings.ankiEnabled);
-
-    // Restore AnkiEnable toggle UI state
-    const ankiTargetSection = Utils.safeGetElement("mgkAnkiTargetSection");
-    if (ankiTargetSection) ankiTargetSection.style.display = settings.ankiEnabled ? "flex" : "none";
 
 
     Utils.safeAddListener(Utils.safeGetElement("mgkExportDeckBtn"), "click", async () => {
@@ -5352,6 +5403,11 @@ async function initializeMigakuExporter() {
       const ids = selCsv.split(",").map(s => s.trim()).filter(Boolean);
       if (ids.length === 0) {
         Utils.setStatus("No deck selected", "#ef4444");
+        return;
+      }
+
+      if (!UI._ankiConnected) {
+        Utils.setStatus("Anki is not connected — open Anki with AnkiConnect installed", "#ef4444");
         return;
       }
 
@@ -5375,27 +5431,24 @@ async function initializeMigakuExporter() {
 
       Storage.saveSettings({ mergeSelected: opts.mergeSelected });
 
-      Utils.setStatus("Starting export(s)...", "#f59e0b");
+      Utils.setStatus("Starting export...", "#f59e0b");
       Progress.show("Starting...", 0);
 
-      // Read AnkiConnect target selections (only when enabled)
-      const ankiEnabled = Utils.safeGetElement("mgkAnkiEnable")?.checked ?? false;
+      // Always use AnkiConnect
       opts.ankiTarget = {};
-      if (ankiEnabled) {
-        const deckSelEl = Utils.safeGetElement("mgkAnkiTargetDeck");
-        const noteTypeSelEl = Utils.safeGetElement("mgkAnkiTargetNoteType");
-        const targetDeckName = deckSelEl?.value || "";
-        const noteTypeRaw = noteTypeSelEl?.value || "";
-        const savedAnkiTarget = Storage.loadAnkiTarget();
-        if (targetDeckName) opts.ankiTarget.deckName = targetDeckName;
-        if (savedAnkiTarget.fieldMapping) opts.ankiTarget.fieldMapping = savedAnkiTarget.fieldMapping;
-        if (noteTypeRaw) {
-          try {
-            const nt = JSON.parse(noteTypeRaw);
-            try { nt.fields = await AnkiConnect.getFieldNames(nt.name); } catch {}
-            opts.ankiTarget.noteType = nt;
-          } catch {}
-        }
+      const deckSelEl = Utils.safeGetElement("mgkAnkiTargetDeck");
+      const noteTypeSelEl = Utils.safeGetElement("mgkAnkiTargetNoteType");
+      const targetDeckName = deckSelEl?.value || "";
+      const noteTypeRaw = noteTypeSelEl?.value || "";
+      const savedAnkiTarget = Storage.loadAnkiTarget();
+      if (targetDeckName) opts.ankiTarget.deckName = targetDeckName;
+      if (savedAnkiTarget.fieldMapping) opts.ankiTarget.fieldMapping = savedAnkiTarget.fieldMapping;
+      if (noteTypeRaw) {
+        try {
+          const nt = JSON.parse(noteTypeRaw);
+          try { nt.fields = await AnkiConnect.getFieldNames(nt.name); } catch {}
+          opts.ankiTarget.noteType = nt;
+        } catch {}
       }
 
       const mappings = Storage.loadMappings();
@@ -5408,7 +5461,7 @@ async function initializeMigakuExporter() {
           opts,
           mappings
         );
-        Utils.setStatus("Exports completed successfully!", "#10b981");
+        Utils.setStatus("Export completed!", "#10b981");
       } catch (e) {
         console.error("Export failed", e);
         Utils.setStatus("Export failed – see console for details", "#ef4444");
@@ -5416,41 +5469,7 @@ async function initializeMigakuExporter() {
       Progress.hide();
     });
 
-    // AnkiConnect button wiring
-    Utils.safeAddListener(Utils.safeGetElement("mgkAnkiConnectBtn"), "click", async () => {
-      const statusEl = Utils.safeGetElement("mgkAnkiConnectStatus");
-      const deckSel = Utils.safeGetElement("mgkAnkiTargetDeck");
-      const noteTypeSel = Utils.safeGetElement("mgkAnkiTargetNoteType");
-      if (statusEl) { statusEl.textContent = "Connecting..."; statusEl.style.color = "#f59e0b"; }
-      try {
-        const connected = await AnkiConnect.testConnection();
-        if (!connected) throw new Error("No response");
-        const [decks, noteTypes] = await Promise.all([
-          AnkiConnect.getDeckNames(),
-          AnkiConnect.getNoteTypeNamesAndIds()
-        ]);
-        const saved = Storage.loadAnkiTarget();
-        deckSel.innerHTML = '<option value="">Use Migaku deck names</option>';
-        decks.sort().forEach(name => {
-          const opt = document.createElement("option");
-          opt.value = name; opt.textContent = name;
-          if (saved.deckName === name) opt.selected = true;
-          deckSel.appendChild(opt);
-        });
-        noteTypeSel.innerHTML = '<option value="">Use Migaku note type</option>';
-        Object.entries(noteTypes).sort(([a],[b]) => a.localeCompare(b)).forEach(([name, id]) => {
-          const opt = document.createElement("option");
-          opt.value = JSON.stringify({ name, id: Number(id) }); opt.textContent = name;
-          if (saved.noteTypeName === name) opt.selected = true;
-          noteTypeSel.appendChild(opt);
-        });
-        if (statusEl) { statusEl.textContent = `Connected (${decks.length} decks, ${Object.keys(noteTypes).length} note types)`; statusEl.style.color = "#10b981"; }
-        Storage.saveAnkiTarget({ deckName: deckSel.value, noteTypeName: noteTypeSel.value ? JSON.parse(noteTypeSel.value).name : "" });
-      } catch (e) {
-        if (statusEl) { statusEl.textContent = "Failed – open Anki with AnkiConnect installed"; statusEl.style.color = "#ef4444"; }
-        Utils.log("AnkiConnect error:", e);
-      }
-    });
+    // AnkiConnect dropdown persistence
     Utils.safeAddListener(Utils.safeGetElement("mgkAnkiTargetDeck"), "change", () => {
       const v = Utils.safeGetElement("mgkAnkiTargetDeck")?.value || "";
       const cur = Storage.loadAnkiTarget(); Storage.saveAnkiTarget({ ...cur, deckName: v });
@@ -5461,30 +5480,6 @@ async function initializeMigakuExporter() {
       Storage.saveAnkiTarget({ ...cur, noteTypeName: v ? JSON.parse(v).name : "", fieldMapping: null });
     });
     Utils.safeAddListener(Utils.safeGetElement("mgkAnkiMapFieldsBtn"), "click", () => MappingModal.open());
-
-    Utils.safeAddListener(Utils.safeGetElement("mgkExportWordlistBtn"), "click", async () => {
-      // First check language filter dropdown
-      const languageFilterEl = Utils.safeGetElement("mgkLanguageFilter");
-      let useLang = languageFilterEl?.value || null;
-
-      // Fall back to passed lang parameter or Migaku's selected language
-      if (!useLang) {
-        useLang = lang || document.querySelector("main.MIGAKU-SRS")?.getAttribute?.("data-mgk-lang-selected") || null;
-      }
-
-      // If still no language, try to get it from the decks
-      if (!useLang && globalSqlDbHandle) {
-        const decks = DatabaseOps.listDecks(globalSqlDbHandle);
-        const activeDeck = decks.find(d => !d.del && d.lang);
-        if (activeDeck) {
-          useLang = activeDeck.lang;
-          Utils.log(`Using language from deck: ${useLang}`);
-        }
-      }
-
-      Utils.setStatus("Exporting wordlists...", "#f59e0b");
-      await ExportProcessor.exportWordlists(globalSqlDbHandle, useLang);
-    });
 
 
     Utils.setStatus("Migaku Exporter loaded successfully!", "#10b981");
