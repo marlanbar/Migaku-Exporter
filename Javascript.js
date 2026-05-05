@@ -5,7 +5,7 @@
 // @grant       GM_getResourceURL
 // @grant       GM_xmlhttpRequest
 // @run-at      document-idle
-// @version     3.1.0
+// @version     3.1.1
 // @author      marlanbar (AnkiConnect integration) | waraki (Base version) | SirOlaf (Original)
 // @description Migaku → Anki exporter with direct AnkiConnect support
 // @require     data:application/javascript,%3BglobalThis.setImmediate%3DsetTimeout%3B
@@ -3183,6 +3183,30 @@ const ExportProcessor = {
     const fieldMapping = ankiTarget.fieldMapping || {};
     const migakuFields = CONFIG.MIGAKU_FIELDS;
 
+    // Build a set of first-field values already in the target deck to skip true duplicates
+    const existingFirstFields = new Set();
+    try {
+      const noteIds = await AnkiConnect.request("findNotes", { query: `"deck:${deckName}"` });
+      if (noteIds && noteIds.length > 0) {
+        // Batch in chunks of 100 to avoid huge payloads
+        for (let i = 0; i < noteIds.length; i += 100) {
+          const chunk = noteIds.slice(i, i + 100);
+          const infos = await AnkiConnect.request("notesInfo", { notes: chunk });
+          for (const info of (infos || [])) {
+            if (info && info.fields) {
+              const firstField = Object.values(info.fields)[0];
+              if (firstField && firstField.value) {
+                existingFirstFields.add(firstField.value.replace(/<[^>]*>/g, '').trim());
+              }
+            }
+          }
+        }
+      }
+      Utils.log(`Found ${existingFirstFields.size} existing notes in deck "${deckName}"`);
+    } catch (e) {
+      Utils.log('Could not fetch existing notes (will add all):', e);
+    }
+
     // helper: get blob from cache, upload to Anki, return filename
     const uploadedMedia = new Map();
     async function ensureMediaInAnki(dirtyPath) {
@@ -3213,6 +3237,7 @@ const ExportProcessor = {
     for (const l of cardsByType.values()) totalCards += l.length;
     const total = totalForProgress || totalCards;
     let processed = 0;
+    let skipped = 0;
     const BATCH = 50;
     const notesBatch = [];
     let addedCount = 0;
@@ -3287,27 +3312,31 @@ const ExportProcessor = {
           // No note type selected: use Migaku field names as-is
           FieldMapper.getFieldNames().forEach((name, i) => { fieldsObj[name] = rawValues[i] || ''; });
         }
+
+        // Skip if first field already exists in target deck
+        const firstFieldValue = Object.values(fieldsObj)[0] || '';
+        const firstFieldClean = firstFieldValue.replace(/<[^>]*>/g, '').trim();
+        if (firstFieldClean && existingFirstFields.has(firstFieldClean)) {
+          skipped++;
+          processed++;
+          Progress.set((processed / Math.max(1, total)) * 95, `Sending cards – ${processed}/${total} (${skipped} skipped)`);
+          continue;
+        }
+
         notesBatch.push({
           deckName,
           modelName: modelName || (ct ? ct.name : 'Basic'),
           fields: fieldsObj,
-          options: {
-            allowDuplicate: false,
-            duplicateScope: 'deck',
-            duplicateScopeOptions: {
-              deckName: deckName,
-              checkChildren: true,
-              checkAllModels: true
-            }
-          },
+          options: { allowDuplicate: true },
           tags: []
         });
         processed++;
-        Progress.set((processed / Math.max(1, total)) * 95, `Sending cards – ${processed}/${total}`);
+        Progress.set((processed / Math.max(1, total)) * 95, `Sending cards – ${processed}/${total} (${skipped} skipped)`);
         if (notesBatch.length >= BATCH) await flushBatch();
       }
     }
     await flushBatch();
+    Utils.log(`Export done: ${addedCount} added, ${skipped} skipped (already existed)`);
     return addedCount;
   },
 
