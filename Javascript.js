@@ -5,19 +5,19 @@
 // @grant       GM_getResourceURL
 // @grant       GM_xmlhttpRequest
 // @run-at      document-idle
-// @version     2.2
-// @author      waraki (Forked From SirOlaf)
-// @description Migaku → Anki exporter
+// @version     2.3
+// @author      marlanbar (AnkiConnect integration) | waraki (Base version) | SirOlaf (Original)
+// @description Migaku → Anki exporter with direct AnkiConnect support
 // @require     data:application/javascript,%3BglobalThis.setImmediate%3DsetTimeout%3B
 // @require     https://cdnjs.cloudflare.com/ajax/libs/sql.js/1.13.0/sql-wasm.js
 // @require     https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js
-// @homepageURL https://github.com/wa-ra-ki/Migaku-Exporter
-// @supportURL  https://github.com/wa-ra-ki/Migaku-Exporter/issues
+// @homepageURL https://github.com/marlanbar/Migaku-Exporter
+// @supportURL  https://github.com/marlanbar/Migaku-Exporter/issues
 // @connect     github.com
 // @connect     raw.githubusercontent.com
 // @connect     localhost
-// @downloadURL https://raw.githubusercontent.com/wa-ra-ki/Migaku-Exporter/main/Javascript.js
-// @updateURL   https://raw.githubusercontent.com/wa-ra-ki/Migaku-Exporter/main/Javascript.js
+// @downloadURL https://raw.githubusercontent.com/marlanbar/Migaku-Exporter/main/Javascript.js
+// @updateURL   https://raw.githubusercontent.com/marlanbar/Migaku-Exporter/main/Javascript.js
 // ==/UserScript==
 
 const CONFIG = {
